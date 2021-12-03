@@ -8,7 +8,9 @@ def func(data):
 
 
 if __name__ == "__main__":
-    assert func([1, 2]) == [1, 2]
+    example_data = []
+    example_expected_result = 0
+    assert func(example_data) == example_expected_result
 
     input_file_path = Path(__file__).parent / "input.txt"
     input_data = input_file_path.read_text().splitlines()

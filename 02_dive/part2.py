@@ -42,9 +42,9 @@ def get_global_position(data):
 
 
 if __name__ == "__main__":
-    exemple_data = ["forward 5", "down 5", "forward 8", "up 3", "down 8", "forward 2"]
+    example_data = ["forward 5", "down 5", "forward 8", "up 3", "down 8", "forward 2"]
     example_expected_result = 900
-    assert get_global_position(exemple_data) == example_expected_result
+    assert get_global_position(example_data) == example_expected_result
 
     input_file_path = Path(__file__).parent / "input.txt"
     input_data = input_file_path.read_text().splitlines()
