@@ -1,58 +1,66 @@
 #!/usr/bin/env python3
 
-from collections import Counter
-from operator import itemgetter
+from itertools import islice
 from pathlib import Path
 
 
-def func(data):
-    bit_idx = -1
-    oxygen_candidates = data
-    while len(oxygen_candidates) != 1:
-        bit_idx += 1
+def nth(iterable, n, default=None):
+    """Returns the nth item or a default value"""
 
-        pivot = list(zip(*oxygen_candidates))
-        bits_to_consider = pivot[bit_idx]
-        occurences = Counter(bits_to_consider)
-        sorted_occurences = sorted(occurences.items(), key=itemgetter(1))
-        if len(sorted_occurences) == 1:
-            most_occurences = sorted_occurences[0][0]
-        else:
-            (ak, ac), (bk, bc) = sorted_occurences
-            if ac == bc:
-                most_occurences = "1"
-            else:
-                most_occurences = bk
+    return next(islice(iterable, n, None), default)
 
-        oxygen_candidates = list(filter(lambda value: value[bit_idx] == most_occurences, oxygen_candidates))
 
-    bit_idx = -1
-    carbon_dioxide_candidates = data
-    while len(carbon_dioxide_candidates) != 1:
-        bit_idx += 1
+def get_equipment_rating(candidates, bit_criteria):
+    """
+    :param candidates: a list of records, all assumed to be of the same length
+    :param bit_criteria: a callable which, return whether the candidates should be filtered on bits
+        with a value of `1` or `0`.
+    """
 
-        pivot = list(zip(*carbon_dioxide_candidates))
-        bits_to_consider = pivot[bit_idx]
-        occurences = Counter(bits_to_consider)
+    bits_introspection_max_position = len(candidates[0])
+    bits_introspection_position = -1
 
-        sorted_occurences = sorted(occurences.items(), key=itemgetter(1))
-        if len(sorted_occurences) == 1:
-            least_occurences = sorted_occurences[0][0]
-        else:
-            (ak, ac), (bk, bc) = sorted_occurences
-            if ac == bc:
-                least_occurences = "0"
-            else:
-                least_occurences = ak
+    while len(candidates) != 1:
+        bits_introspection_position += 1
+        if bits_introspection_position > bits_introspection_max_position:
+            raise ValueError("Unable to reduce the list of candidates to a single candidate")
 
-        carbon_dioxide_candidates = list(
-            filter(lambda value: value[bit_idx] == least_occurences, carbon_dioxide_candidates)
+        bits_by_position = zip(*candidates)
+        bits_for_position = nth(bits_by_position, bits_introspection_position)
+
+        ones_count = int("".join(bits_for_position), 2).bit_count()
+        records_count = len(candidates)
+        most_common_bit = "1" if bit_criteria(ones_count, records_count) else "0"
+
+        candidates = list(
+            filter(
+                lambda binary_representation: binary_representation[bits_introspection_position] == most_common_bit,
+                candidates,
+            )
         )
+    else:
+        return int(candidates[0], 2)
 
-    oxygen_generator_rating = int(oxygen_candidates[0], 2)
-    co2_scrubber_rating = int(carbon_dioxide_candidates[0], 2)
 
-    return oxygen_generator_rating * co2_scrubber_rating
+def get_oxygen_generator_rating(candidates):
+    return get_equipment_rating(
+        candidates,
+        bit_criteria=lambda ones_count, records_count: ones_count >= records_count / 2
+    )
+
+
+def get_carbon_dioxide_scrubber_rating(candidates):
+    return get_equipment_rating(
+        candidates,
+        bit_criteria=lambda ones_count, records_count: ones_count < records_count / 2
+    )
+
+
+def get_life_support_rating(data):
+    oxygen_generator_rating = get_oxygen_generator_rating(data)
+    carbon_dioxide_scrubber_rating = get_carbon_dioxide_scrubber_rating(data)
+
+    return oxygen_generator_rating * carbon_dioxide_scrubber_rating
 
 
 if __name__ == "__main__":
@@ -71,10 +79,10 @@ if __name__ == "__main__":
         "01010",
     ]
     example_expected_result = 230
-    assert func(example_data) == example_expected_result
+    assert get_life_support_rating(example_data) == example_expected_result
 
     input_file_path = Path(__file__).parent / "input.txt"
     input_data = input_file_path.read_text().splitlines()
 
-    result = func(input_data)
+    result = get_life_support_rating(input_data)
     print(f"{result=}")
