@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 
-from operator import itemgetter
 from pathlib import Path
 
 
 def get_fuel_burn(data):
     positions = sorted(map(int, data.split(",")))
 
-    candidates = dict.fromkeys(range(positions[0], positions[-1]), 0)
-    for candidate in candidates:
-        for position in positions:
-            candidates[candidate] += abs(position - candidate)
-
-    sorted_candidates = sorted(candidates.items(), key=itemgetter(1))
-    return sorted_candidates[0][1]
+    return min(
+        sum(abs(crab_position - target) for crab_position in positions)
+        for target in range(positions[0], positions[-1])
+    )
 
 
 if __name__ == "__main__":

@@ -1,25 +1,18 @@
 #!/usr/bin/env python3
 
-from math import ceil
-from operator import itemgetter
 from pathlib import Path
 
 
 def get_fuel_burn(data):
     positions = sorted(map(int, data.split(",")))
 
-    candidates = dict.fromkeys(range(positions[0], positions[-1]), 0)
-    for candidate in candidates:
-        for position in positions:
-            distance = abs(position - candidate)
-            if distance == 0:
-                fuel_burn = 0
-            else:
-                fuel_burn = ceil((distance * (distance + 1)) / 2)
-            candidates[candidate] += fuel_burn
-
-    sorted_candidates = sorted(candidates.items(), key=itemgetter(1))
-    return sorted_candidates[0][1]
+    return min(
+        sum(
+            (distance := abs(crab_position - target)) * (distance + 1) // 2
+            for crab_position in positions
+        )
+        for target in range(positions[0], positions[-1])
+    )
 
 
 if __name__ == "__main__":
