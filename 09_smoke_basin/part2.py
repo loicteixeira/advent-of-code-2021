@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from dataclasses import dataclass
+from math import prod
 from pathlib import Path
 from queue import SimpleQueue
 from typing import Optional
@@ -40,7 +41,7 @@ def print_grid(cells):
         print(cell, end="   ")
 
 
-def compute_risk_level(data):
+def get_cells(data):
     cells = []
 
     above = [None] * len(data[0])
@@ -48,7 +49,11 @@ def compute_risk_level(data):
         left = None
         for width, point in enumerate(line):
             cell = Cell(
-                value=int(point), x=width, y=height, above=above[width], left=left
+                value=int(point),
+                x=width,
+                y=height,
+                above=above[width],
+                left=left,
             )
 
             if left:
@@ -61,6 +66,16 @@ def compute_risk_level(data):
 
             cells.append(cell)
 
+    return cells
+
+
+def get_neighbors(cell):
+    for attr in ("above", "below", "left", "right"):
+        if neighbor := getattr(cell, attr):
+            yield neighbor
+
+
+def get_basin_sizes(cells):
     basin_sizes = []
 
     for cell in cells:
@@ -68,30 +83,34 @@ def compute_risk_level(data):
         candidates = SimpleQueue()
         visited = {cell}
 
-        for attr in ("above", "below", "left", "right"):
-            if neighbor := getattr(cell, attr):
-                candidates.put((cell, neighbor))
+        candidates.put((None, cell))
 
         while not candidates.empty():
-            a, b = candidates.get()
+            basin_cell, direct_neighbor = candidates.get()
 
-            if b.value == 9:
-                visited.add(b)
+            if direct_neighbor.value == 9:
+                visited.add(direct_neighbor)
                 continue
 
-            if a.value < b.value:
-                basin.add(b)
-                visited.add(b)
+            if basin_cell and basin_cell.value >= direct_neighbor.value:
+                continue
 
-                for attr in ("above", "below", "left", "right"):
-                    if neighbor := getattr(b, attr):
-                        if neighbor not in visited:
-                            candidates.put((b, neighbor))
+            basin.add(direct_neighbor)
+            visited.add(direct_neighbor)
+
+            for further_neighbor in get_neighbors(direct_neighbor):
+                candidates.put((direct_neighbor, further_neighbor))
 
         basin_sizes.append(len(basin))
 
-    top_basins = sorted(basin_sizes)[-3:]
-    risk_level = top_basins[0] * top_basins[1] * top_basins[2]
+    return basin_sizes
+
+
+def compute_risk_level(data):
+    cells = get_cells(data)
+    basin_sizes = get_basin_sizes(cells)
+    biggest_basins = sorted(basin_sizes)[-3:]
+    risk_level = prod(biggest_basins)
     return risk_level
 
 
