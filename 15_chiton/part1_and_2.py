@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import time
 from collections import defaultdict
 from dataclasses import dataclass
 from operator import attrgetter
@@ -18,7 +19,7 @@ class Node:
     right: Optional["Node"] = None
 
     def get_neighbors(self):
-        yield from filter(None, [self.right, self.below, self.left, self.right])
+        yield from filter(None, [self.right, self.below, self.left, self.above])
 
     def __str__(self):
         return f"{self.value} ({self.x}, {self.y})"
@@ -31,6 +32,45 @@ class Node:
 
     def __hash__(self):
         return hash((self.x, self.y))
+
+
+def multiply(data, by=5):
+    # From the original data `1`, we only need 8 "copies" (so 9 grids total).
+    # 1 2 3 4 5
+    # 2 3 4 5 6
+    # 3 4 5 6 7
+    # 4 5 6 7 8
+    # 5 6 7 8 9
+    unfolded_copies = [
+        [
+            [v if (v := int(value) + copy_idx) <= 9 else v - 9 for value in row]
+            for row in data
+        ]
+        for copy_idx in range(9)
+    ]
+
+    original_width_and_height = len(data[0])
+    final_width_and_height = len(data[0]) * by
+
+    return [
+        [
+            unfolded_copies[
+                # Finds the correct copy to use
+                x // original_width_and_height
+                + y // original_width_and_height
+            ][
+                # Finds the correct row to use
+                y
+                % original_width_and_height
+            ][
+                # Finds the correct column to use
+                x
+                % original_width_and_height
+            ]
+            for x in range(final_width_and_height)
+        ]
+        for y in range(final_width_and_height)
+    ]
 
 
 def get_nodes(data):
@@ -122,15 +162,15 @@ def reconstruct_path(came_from, current):
     return list(reversed(path))
 
 
-def get_lower_risk_level(data):
+def get_lower_risk_level(data, show_grid=True):
     start, *_, goal = grid = get_nodes(data)
 
-    estimated_cost_to_goal = (
-        lambda current: (goal.x - current.x) + (goal.y - current.y) + current.value
-    )
+    estimated_cost_to_goal = attrgetter("value")
 
     path = find_safer_path(start, goal, estimated_cost_to_goal)
-    print_grid(grid, path)
+
+    if show_grid:
+        print_grid(grid, path)
 
     risk_level = sum(map(attrgetter("value"), path)) - start.value
     return risk_level
@@ -149,12 +189,29 @@ if __name__ == "__main__":
         "1293138521",
         "2311944581",
     ]
-    expected_result = 40
-    assert get_lower_risk_level(example_data) == expected_result
+    assert get_lower_risk_level(example_data) == 40
+    assert get_lower_risk_level(multiply(example_data, 5)) == 315
+
+    example_data = [
+        "19999",
+        "19111",
+        "11191",
+    ]
+    assert get_lower_risk_level(example_data) == 8
 
     input_file_path = Path(__file__).parent / "input.txt"
     input_data = input_file_path.read_text().splitlines()
 
-    # TODO: The function works for the example input but not for the full input.
-    result = get_lower_risk_level(input_data)
-    print(f"{result=}")
+    normal_size_result = get_lower_risk_level(input_data)
+    print(f"{normal_size_result=}")
+
+    start_time = time.monotonic()
+    large_input_data = multiply(input_data, 5)
+    expand_time = time.monotonic()
+    large_size_result = get_lower_risk_level(large_input_data, show_grid=False)
+    result_time = time.monotonic()
+    print(
+        f"{large_size_result=} "
+        f"(expand={expand_time-start_time:.2f}s, "
+        f"path={result_time-expand_time:.2f}s)"
+    )
